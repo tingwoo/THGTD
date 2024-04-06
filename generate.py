@@ -6,7 +6,7 @@ def translate_video_json(data):
     new_data = []
     for i, spk in enumerate(data['time']):
         for segment in spk:
-            new_data.append({ 'spk': f'spk{i}', 'start': int(segment[0]*1000), 'end': int(segment[1]*1000) })
+            new_data.append({ 'spk': f'0000{i}', 'start': int(segment[0]*1000), 'end': int(segment[1]*1000) })
     return new_data
 
 def split_audio_channels(src_path, res_dir_path):
@@ -134,7 +134,7 @@ split_audio_channels(src_path="source/0000_audio_stereo.wav", res_dir_path="sour
 # id:             Output folder name
 # video_json:     [{'spk': 'spkA', 'start': 15, 'end': 1270}, {'spk': 'spkB', 'start': 1240, 'end': 3535}, ...]
 # audio_json:     [{'spk': 'spk1', 'start': 10, 'end': 1200}, {'spk': 'spk2', 'start': 1250, 'end': 3600}, ...]
-# video_src_path: Folder containing cropped video files from a certain video (e.g. 'SPEAKER_0A.mp4', 'SPEAKER_0B.mp4')
+# video_src_path: Folder containing cropped video files from a certain video (00000.avi and 00001.avi)
 # audio_src_path: Folder containing seperated audio files from a certain audio (e.g. 'SPEAKER_00.mp3', 'SPEAKER_01.mp3')
 
 integrator = Integrator(
@@ -154,7 +154,7 @@ integrator = Integrator(
 # visualize:      To display plot or not
 
 integrator.generate_data(
-    target_face='spk0', 
+    target_face='00000', 
     at_most=10, 
     length=8000, 
     i_threshold=0.1, 
@@ -163,7 +163,7 @@ integrator.generate_data(
 )
 
 integrator.generate_data(
-    target_face='spk1', 
+    target_face='00001', 
     at_most=10, 
     length=8000, 
     i_threshold=0.1, 
