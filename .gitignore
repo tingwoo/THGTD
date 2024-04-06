@@ -2,3 +2,6 @@ result/*
 source/*
 .DS_Store
 __pycache__
+
+!result/README.md
+!source/README.md
