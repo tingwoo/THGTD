@@ -1,6 +1,7 @@
 from integrator import Integrator
 from pydub import AudioSegment
-import os
+import os,argparse
+import json
 
 def translate_video_json(data):
     new_data = []
@@ -21,6 +22,17 @@ def split_audio_channels(src_path, res_dir_path):
     left_channel.export(os.path.join(res_dir_path, "SPEAKER_00.wav"), format="wav")
     right_channel.export(os.path.join(res_dir_path, "SPEAKER_01.wav"), format="wav")
 
+
+parser = argparse.ArgumentParser(description = "TalkNet Demo or Columnbia ASD Evaluation")
+
+parser.add_argument('--talknet_folder_root',             type=str, default="001",   help='Demo video name')
+parser.add_argument('--audio_folder_root',           type=str, default="demo",  help='Path for inputs, tmps and outputs')
+parser.add_argument('--id',           type=int, default=0,  help='Path for inputs, tmps and outputs')
+parser.add_argument('--spk_datajson_path',           type=str, default=0)
+parser.add_argument('--spk_id',           type=int, default=0)
+args = parser.parse_args()
+
+print("video id : ",args.id,", audio id : ",args.spk_id)
 
 talknet_input = {
     "videoname": "0000",
@@ -73,6 +85,7 @@ talknet_input = {
     ]
 }
 
+
 seperate_input = [
     {
         "spk": "SPEAKER_00",
@@ -120,12 +133,35 @@ seperate_input = [
         "end": 48968
     }
 ]
+talknet_json_path = os.path.join(args.talknet_folder_root,"pywork/data.json")
+
+with open(talknet_json_path, 'r') as f:
+    talknet_input = json.load(f)
+print(talknet_input)
+with open(args.spk_datajson_path, 'r') as f:
+    spk_data = json.load(f)
+
+spk_id_0 = "{:04}".format(args.spk_id)
+print(spk_id_0)
+print(" ")
+for d in (spk_data['wav_files']):
+    # print(d['file_name'][-8:-4])
+    if(d['file_name'][-8:-4] == spk_id_0):
+        seperate_input = d['data']
+        print(seperate_input)
+        break
+# seperate_input = spk_data["wav_files"][args.spk_id]['data']
 
 # Translate Talknet output
 talknet_input = translate_video_json(talknet_input)
 
 # split stereo into mono
-split_audio_channels(src_path="source/0000_audio_stereo.wav", res_dir_path="source/0000_audio")
+audio_path = os.path.join("source", f"{args.id}_audio" )
+wav_path = os.path.join(args.audio_folder_root,"0000.wav" )
+os.makedirs(audio_path, exist_ok = True)
+split_audio_channels(src_path=wav_path, res_dir_path=f"source/{args.id}_audio")
+
+
 
 # Match, select segments and cut
 # only TWO speakers are allowed (for now)
@@ -138,11 +174,12 @@ split_audio_channels(src_path="source/0000_audio_stereo.wav", res_dir_path="sour
 # audio_src_path: Folder containing seperated audio files from a certain audio (e.g. 'SPEAKER_00.mp3', 'SPEAKER_01.mp3')
 
 integrator = Integrator(
-    id='0000',
+    id=f"{args.id}",
     video_json=talknet_input, 
     audio_json=seperate_input, 
-    video_src_path='source/0000_video', 
-    audio_src_path='source/0000_audio'
+    # video_src_path=f'source/{args.id}_video', 
+    video_src_path= os.path.join(args.talknet_folder_root,"pycrop"),
+    audio_src_path=f'source/{args.id}_audio'
 )
 
 # INPUTS
