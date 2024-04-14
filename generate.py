@@ -10,7 +10,7 @@ def translate_video_json(data):
             new_data.append({ 'spk': f'0000{i}', 'start': int(segment[0]*1000), 'end': int(segment[1]*1000) })
     return new_data
 
-def split_audio_channels(src_path, res_dir_path):
+def split_audio_channels(src_path, res_dir_path, speaker_names):
     # Split stereo into mono
     stereo_audio = AudioSegment.from_file(src_path)
 
@@ -19,8 +19,21 @@ def split_audio_channels(src_path, res_dir_path):
 
     os.makedirs(res_dir_path, exist_ok=True)
 
-    left_channel.export(os.path.join(res_dir_path, "SPEAKER_00.wav"), format="wav")
-    right_channel.export(os.path.join(res_dir_path, "SPEAKER_01.wav"), format="wav")
+    left_channel.export(os.path.join(res_dir_path, speaker_names[0] + ".wav"), format="wav")
+    right_channel.export(os.path.join(res_dir_path, speaker_names[1] + ".wav"), format="wav")
+
+def get_two_speakers(data):
+    unique_speakers = []
+
+    for entry in data:
+        speaker = entry["spk"]
+        if speaker not in unique_speakers:
+            unique_speakers.append(speaker)
+
+    if len(unique_speakers) == 2:
+        return unique_speakers
+    else:
+        return []
 
 
 parser = argparse.ArgumentParser(description = "TalkNet Demo or Columnbia ASD Evaluation")
@@ -34,123 +47,31 @@ args = parser.parse_args()
 
 print("video id : ",args.id,", audio id : ",args.spk_id)
 
-talknet_input = {
-    "videoname": "0000",
-    "speakers": 2,
-    "time": [
-        [
-            [
-                3.08,
-                8.92
-            ],
-            [
-                17.16,
-                17.56
-            ],
-            [
-                18.0,
-                26.48
-            ],
-            [
-                36.08,
-                40.0
-            ],
-            [
-                45.76,
-                50.08
-            ]
-        ],
-        [
-            [
-                0.96,
-                2.04
-            ],
-            [
-                2.6,
-                2.8
-            ],
-            [
-                9.2,
-                16.88
-            ],
-            [
-                27.0,
-                36.04
-            ],
-            [
-                40.96,
-                45.56
-            ]
-        ]
-    ]
-}
-
-
-seperate_input = [
-    {
-        "spk": "SPEAKER_00",
-        "start": 31,
-        "end": 2933
-    },
-    {
-        "spk": "SPEAKER_01",
-        "start": 3153,
-        "end": 8755
-    },
-    {
-        "spk": "SPEAKER_00",
-        "start": 9110,
-        "end": 16822
-    },
-    {
-        "spk": "SPEAKER_01",
-        "start": 17159,
-        "end": 26322
-    },
-    {
-        "spk": "SPEAKER_00",
-        "start": 26710,
-        "end": 36683
-    },
-    {
-        "spk": "SPEAKER_01",
-        "start": 36683,
-        "end": 39856
-    },
-    {
-        "spk": "SPEAKER_00",
-        "start": 40801,
-        "end": 46977
-    },
-    {
-        "spk": "SPEAKER_01",
-        "start": 46977,
-        "end": 49964
-    },
-    {
-        "spk": "SPEAKER_00",
-        "start": 48901,
-        "end": 48968
-    }
-]
 talknet_json_path = os.path.join(args.talknet_folder_root,"pywork/data.json")
 
 with open(talknet_json_path, 'r') as f:
     talknet_input = json.load(f)
 print(talknet_input)
+
 with open(args.spk_datajson_path, 'r') as f:
     spk_data = json.load(f)
 
-spk_id_0 = "{:04}".format(args.spk_id)
-print(spk_id_0)
+spk_id_padded = "{:04}".format(args.spk_id)
+print(spk_id_padded)
 print(" ")
 for d in (spk_data['wav_files']):
-    # print(d['file_name'][-8:-4])
-    if(d['file_name'][-8:-4] == spk_id_0):
+    base_name = os.path.basename(d['file_name'])
+    name, ext = os.path.splitext(base_name)
+    if(name == spk_id_padded):
         seperate_input = d['data']
         print(seperate_input)
         break
-# seperate_input = spk_data["wav_files"][args.spk_id]['data']
+
+# Make sure seperate output only has 2 speakers
+speaker_list = get_two_speakers(seperate_input) 
+if not speaker_list:
+    print("Not 2 speakers.")
+    exit()
 
 # Translate Talknet output
 talknet_input = translate_video_json(talknet_input)
@@ -158,10 +79,9 @@ talknet_input = translate_video_json(talknet_input)
 # split stereo into mono
 audio_path = os.path.join("source", f"{args.id}_audio" )
 wav_path = os.path.join(args.audio_folder_root,"0000.wav" )
+
 os.makedirs(audio_path, exist_ok = True)
-split_audio_channels(src_path=wav_path, res_dir_path=f"source/{args.id}_audio")
-
-
+split_audio_channels(src_path=wav_path, res_dir_path=f"source/{args.id}_audio", speaker_names=speaker_list)
 
 # Match, select segments and cut
 # only TWO speakers are allowed (for now)
